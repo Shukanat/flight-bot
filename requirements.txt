@@ -1,7 +1,9 @@
 fastapi==0.79.0
 uvicorn==0.18.2
 emoji==1.7.0
-botbuilder-integration-aiohttp>=4.14.0
-botbuilder-dialogs>=4.14.0
-botbuilder-ai>=4.14.0
+botbuilder-integration-aiohttp
+botbuilder-dialogs
+botbuilder-ai
 datatypes-date-time>=1.0.0.a2
+azure-identity
+azure-keyvault

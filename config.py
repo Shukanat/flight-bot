@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import os
-from dotenv import load_dotenv
-load_dotenv()
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
-""" Bot Configuration """
+credential = DefaultAzureCredential()
+secret_client = SecretClient(vault_url="https://chatbot-vault.vault.azure.net/", credential=credential)
 
 
 class DefaultConfig:
@@ -12,6 +13,6 @@ class DefaultConfig:
 
     APP_ID = os.environ.get("MicrosoftAppId", "")
     APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
-    LUIS_APP_ID = os.environ.get("LuisAppId", "")
-    LUIS_API_KEY = os.environ.get("LuisAPIKey", "")
-    LUIS_API_HOST_NAME = os.environ.get("LuisAPIHostName", "")
+    LUIS_APP_ID = secret_client.get_secret('LuisAppId').value
+    LUIS_API_KEY = secret_client.get_secret('LuisAPIKey').value
+    LUIS_API_HOST_NAME = secret_client.get_secret('LuisAPIHostName').value
