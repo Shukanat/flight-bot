@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 from enum import Enum
-from typing import Dict
+from typing import Dict, Tuple
 from botbuilder.ai.luis import LuisRecognizer
 from botbuilder.core import IntentScore, TopIntent, TurnContext
 
@@ -31,7 +31,7 @@ class LuisHelper:
     @staticmethod
     async def execute_luis_query(
         luis_recognizer: LuisRecognizer, turn_context: TurnContext
-    ) -> (Intent, object):
+    ) -> Tuple[Intent, object]:
         """
         Returns an object with preformatted LUIS results for the bot's dialogs to consume.
         """
