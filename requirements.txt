@@ -1,9 +1,19 @@
 fastapi==0.79.0
 uvicorn==0.18.2
 emoji==1.7.0
-botbuilder-integration-aiohttp
-botbuilder-dialogs
-botbuilder-ai
-datatypes-date-time>=1.0.0.a2
-azure-identity
-azure-keyvault
+requests==2.23.0
+botbuilder-core==4.14.1
+botframework-connector==4.14.1
+botbuilder-schema==4.14.1
+botbuilder-dialogs==4.14.1
+botbuilder-ai==4.14.1
+botbuilder-applicationinsights==4.14.1
+botbuilder-integration-aiohttp == 4.14.1
+botbuilder-integration-applicationinsights-aiohttp==4.14.1
+botbuilder-testing == 4.14.1
+datatypes-date-time==1.0.0.a2
+azure-cognitiveservices-language-luis==0.2.0
+msrest==0.6.10
+aiohttp==3.7.4.post0
+azure-identity==1.5.0
+azure-keyvault==4.2.0
