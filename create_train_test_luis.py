@@ -2,6 +2,8 @@ import json
 import time
 
 from azure.cognitiveservices.language.luis.authoring import LUISAuthoringClient
+from azure.cognitiveservices.language.luis.authoring.models import \
+    ApplicationCreateObject
 from azure.cognitiveservices.language.luis.runtime import LUISRuntimeClient
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -20,30 +22,69 @@ def load_json(path: str) -> dict:
         loaded = json.load(f)
     return loaded
 
-FlightBooking = load_json('./models/FlightBooking.json')
-TrainSet = load_json('./models/TrainSet.json')
+def chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+TrainSet = load_json('./models/largeTrainSet.json')
 versionId = '0.1'
 
 def main():
 
-    ### IMPORT OF THE APP ###
+    ### CONFIG ###
+    appName = "BookFlight"
+    versionId = "0.1"
+    culture = "en-us"
+    appDefinition = ApplicationCreateObject(name=appName, initial_version_id=versionId, culture=culture)
     client = LUISAuthoringClient(autoringPredictionEndpoint, CognitiveServicesCredentials(autoringKey))
-    appId = client.apps.import_v2_app(FlightBooking)
 
-    ### ADD NEW ENTITIES ###
-    client.model.add_prebuilt(appId, versionId, prebuilt_extractor_names=["number"])
+    ### CREATE APP ###
+    appId = client.apps.add(appDefinition)
+    logger.info(f'Application created with id: {appId}')
 
-    mlEntityDefinition = [{"name": "Amount"}]
-    modelId = client.model.add_entity(appId, versionId, name="Budget", children=mlEntityDefinition)
+    ### CREATE INTENTS ###
+    intents = ["BookFlight", "GetWeather", "Cancel"]
+    for intent in intents:
+        client.model.add_intent(appId, versionId, intent)
+    logger.info(f"Created LUIS intents: {intents}")
 
-    modelObject = client.model.get_entity(appId, versionId, modelId)
-    childrenId = modelObject.as_dict()['children'][0]['id']
+    ### ADD PREBUILD ENTITY ###
+    prebuilt_entities = ["geographyV2", "datetimeV2", "money"]
+    client.model.add_prebuilt(appId, versionId, prebuilt_extractor_names=prebuilt_entities)
+    logger.info(f"Added prebuilt entities: {prebuilt_entities}")
+    
+    ### ADD MACHINE LEARNING ENTITIES ###
+    ml_entities = ['From', 'To', 'Departure', 'Return', 'Budget']
+    ml_entities_ids = {}
+    for entity in ml_entities:
+        id = client.model.add_entity(appId, versionId, name=entity)
+        ml_entities_ids[entity] = id
+    logger.info(f'Added ml entities: {ml_entities}')    
 
-    prebuiltFeatureRequiredDefinition = {"model_name": "number", "is_required": True}
-    client.features.add_entity_feature(appId, versionId, childrenId, prebuiltFeatureRequiredDefinition)
+    ### ADD MODELS AS ENTITY'S FEATURE
+    geography_feature = {
+        "model_name": "geographyV2",
+        "is_required": False,
+    }
+    client.features.add_entity_feature(appId, versionId, ml_entities_ids['From'], geography_feature)
+    client.features.add_entity_feature(appId, versionId, ml_entities_ids['To'], geography_feature)
 
-    ### ADD NEW EXEMPLES AND TRAIN ###
-    client.examples.batch(appId, versionId, TrainSet)
+    datetime = {
+        "model_name": "datetimeV2",
+        "is_required": False,
+    }
+    client.features.add_entity_feature(appId, versionId, ml_entities_ids['Departure'], datetime)
+    client.features.add_entity_feature(appId, versionId, ml_entities_ids['Return'], datetime)
+
+    money = {
+        "model_name": "money",
+        "is_required": False,
+    }
+    client.features.add_entity_feature(appId, versionId, ml_entities_ids['Budget'], money)
+
+    ### ADD DATA AND TRAIN ###
+    for chunk in chunks(TrainSet, 100):
+        client.examples.batch(appId, versionId, chunk)
 
     client.train.train_version(appId, versionId)
     logger.info('Start to train the model')
