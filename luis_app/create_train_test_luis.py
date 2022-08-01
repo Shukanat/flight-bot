@@ -1,4 +1,3 @@
-import json
 import time
 
 from azure.cognitiveservices.language.luis.authoring import LUISAuthoringClient
@@ -10,6 +9,8 @@ from azure.keyvault.secrets import SecretClient
 from loguru import logger
 from msrest.authentication import CognitiveServicesCredentials
 
+from create_dataset import load_json
+
 credential = DefaultAzureCredential()
 secret_client = SecretClient(vault_url="https://chatbot-vault.vault.azure.net/", credential=credential)
 
@@ -17,16 +18,11 @@ predictionKey = secret_client.get_secret('LuisAPIKey').value
 autoringKey = secret_client.get_secret('LuisAutoringAPIKey').value 
 autoringPredictionEndpoint = 'https://' + secret_client.get_secret('LuisAPIHostName').value
 
-def load_json(path: str) -> dict:
-    with open(path, 'rb') as f:
-        loaded = json.load(f)
-    return loaded
-
 def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-TrainSet = load_json('./models/largeTrainSet.json')
+TrainSet = load_json('./trainSet.json')
 versionId = '0.1'
 
 def main():
@@ -54,7 +50,7 @@ def main():
     logger.info(f"Added prebuilt entities: {prebuilt_entities}")
     
     ### ADD MACHINE LEARNING ENTITIES ###
-    ml_entities = ['From', 'To', 'Departure', 'Return', 'Budget']
+    ml_entities = ['From', 'To', 'Budget']
     ml_entities_ids = {}
     for entity in ml_entities:
         id = client.model.add_entity(appId, versionId, name=entity)
@@ -68,13 +64,6 @@ def main():
     }
     client.features.add_entity_feature(appId, versionId, ml_entities_ids['From'], geography_feature)
     client.features.add_entity_feature(appId, versionId, ml_entities_ids['To'], geography_feature)
-
-    datetime = {
-        "model_name": "datetimeV2",
-        "is_required": False,
-    }
-    client.features.add_entity_feature(appId, versionId, ml_entities_ids['Departure'], datetime)
-    client.features.add_entity_feature(appId, versionId, ml_entities_ids['Return'], datetime)
 
     money = {
         "model_name": "money",
