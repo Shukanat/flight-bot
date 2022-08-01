@@ -1,11 +1,12 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+from datetime import datetime
 from enum import Enum
 from typing import Dict, Tuple
-from botbuilder.ai.luis import LuisRecognizer
-from botbuilder.core import IntentScore, TopIntent, TurnContext
 
 from booking_details import BookingDetails
+from botbuilder.ai.luis import LuisRecognizer
+from botbuilder.core import IntentScore, TopIntent, TurnContext
+from datatypes_date_time import Timex
+from dateutil.relativedelta import relativedelta
 
 
 class Intent(Enum):
@@ -26,6 +27,10 @@ def top_intent(intents: Dict[Intent, dict]) -> TopIntent:
 
     return TopIntent(max_intent, max_value)
 
+def to_datetime(timex, now):
+    return datetime(timex.year if timex.year else now.year,
+                    timex.month if timex.month else now.month,
+                    timex.day_of_month if timex.day_of_month else now.day)
 
 class LuisHelper:
     @staticmethod
@@ -54,49 +59,102 @@ class LuisHelper:
             if intent == Intent.BOOK_FLIGHT.value:
                 result = BookingDetails()
 
-                # We need to get the result from the LUIS JSON which at every level returns an array.
-                to_entities = recognizer_result.entities.get("$instance", {}).get(
-                    "To", []
-                )
-                if len(to_entities) > 0:
-                    if recognizer_result.entities.get("To", [{"$instance": {}}])[0][
-                        "$instance"
-                    ]:
-                        result.destination = to_entities[0]["text"].capitalize()
-                    else:
-                        result.unsupported_airports.append(
-                            to_entities[0]["text"].capitalize()
-                        )
+                # Extract the departure city
+                from_city = recognizer_result.entities.get("From")
+                if from_city:
+                    result.from_city = from_city[0]
 
-                from_entities = recognizer_result.entities.get("$instance", {}).get(
-                    "From", []
-                )
-                if len(from_entities) > 0:
-                    if recognizer_result.entities.get("From", [{"$instance": {}}])[0][
-                        "$instance"
-                    ]:
-                        result.origin = from_entities[0]["text"].capitalize()
-                    else:
-                        result.unsupported_airports.append(
-                            from_entities[0]["text"].capitalize()
-                        )
+                # Extract the arrival city
+                to_city = recognizer_result.entities.get("To")
+                if to_city:
+                    result.to_city = to_city[0]
 
-                # This value will be a TIMEX. And we are only interested in a Date so grab the first result and drop
-                # the Time part. TIMEX is a format that represents DateTime expressions that include some ambiguity.
-                # e.g. missing a Year.
-                date_entities = recognizer_result.entities.get("datetime", [])
-                if date_entities:
-                    timex = date_entities[0]["timex"]
+                # Extract the datetimes
+                datetimes = recognizer_result.entities.get("datetime")
+                if datetimes:
+                    result.from_date, result.to_date = LuisHelper.extract_datetimes(datetimes)
 
-                    if timex:
-                        datetime = timex[0].split("T")[0]
-
-                        result.travel_date = datetime
-
-                else:
-                    result.travel_date = None
+                # Extract the budget
+                money = recognizer_result.entities.get("money")
+                budget = recognizer_result.entities.get("Budget")
+                if money:
+                    number = money[0]
+                    result.budget = f"{number:0.2f} {number}"
+                elif budget:
+                    result.budget = budget[0]
 
         except Exception as exception:
             print(exception)
 
         return intent, result
+
+    @staticmethod
+    def transform_date(timex):
+        return relativedelta(
+                years=int(timex.years) if timex.years else 0,
+                months=int(timex.months) if timex.months else 0,
+                weeks=int(timex.weeks) if timex.weeks else 0,
+                days=int(timex.days) if timex.days else 0,
+                hours=int(timex.hours) if timex.hours else 0,
+                minutes=int(timex.minutes) if timex.minutes else 0,
+                seconds=int(timex.seconds) if timex.seconds else 0)
+
+    @staticmethod
+    def extract_datetimes(datetimes: list) -> Tuple[str, str]:
+        """"""
+        from_date, to_date = "", ""
+        now = datetime.now()
+        dt_format = "%d-%m-%Y"
+
+        if len(datetimes) == 1:
+            if datetimes[0]["type"] == "daterange":
+                timex = Timex(datetimes[0]["timex"][0])
+                from_date = to_datetime(timex, now)
+                to_date = from_date + LuisHelper.transform_date(timex)
+
+                from_date = from_date.strftime(dt_format)
+                to_date = to_date.strftime(dt_format)
+
+            elif datetimes[0]["type"] == "duration":
+                timex = Timex(datetimes[0]["timex"][0])
+                from_date = now
+                to_date = from_date + LuisHelper.transform_date(timex)
+
+                from_date = from_date.strftime(dt_format)
+                to_date = to_date.strftime(dt_format)
+
+        elif len(datetimes) == 2:
+            if (datetimes[0]["type"] == "date") and (datetimes[1]["type"] == "date"):
+                timex = Timex(datetimes[0]["timex"][0])
+                dt0 = to_datetime(timex, now)
+
+                timex = Timex(datetimes[1]["timex"][0])
+                dt1 = to_datetime(timex, now)
+
+                from_date = min(dt0, dt1)
+                to_date = max(dt0, dt1)
+
+                from_date = from_date.strftime(dt_format)
+                to_date = to_date.strftime(dt_format)
+
+            elif (datetimes[0]["type"] == "date") and (datetimes[1]["type"] == "duration"):
+                timex = Timex(datetimes[0]["timex"][0])
+                from_date = to_datetime(timex, now)
+
+                timex = Timex(datetimes[1]["timex"][0])
+                to_date = from_date + LuisHelper.transform_date(timex)
+
+                from_date = from_date.strftime(dt_format)
+                to_date = to_date.strftime(dt_format)
+
+            elif (datetimes[0]["type"] == "duration") and (datetimes[1]["type"] == "date"):
+                timex = Timex(datetimes[1]["timex"][0])
+                from_date = to_datetime(timex, now)
+
+                timex = Timex(datetimes[0]["timex"][0])
+                to_date = from_date + LuisHelper.transform_date(timex)
+
+                from_date = from_date.strftime(dt_format)
+                to_date = to_date.strftime(dt_format)
+
+        return from_date, to_date
