@@ -5,9 +5,12 @@ from botbuilder.core import (
     BotFrameworkAdapterSettings,
     ConversationState,
     MemoryStorage,
-    UserState,
-)
+    UserState)
 from botbuilder.schema import Activity
+from botbuilder.applicationinsights import ApplicationInsightsTelemetryClient
+from botbuilder.integration.applicationinsights.aiohttp import AiohttpTelemetryProcessor
+from botbuilder.core.telemetry_logger_middleware import TelemetryLoggerMiddleware
+from botbuilder.core import NullTelemetryClient
 
 from config import DefaultConfig
 from dialogs import MainDialog, BookingDialog
@@ -22,11 +25,21 @@ MEMORY = MemoryStorage()
 USER_STATE = UserState(MEMORY)
 CONVERSATION_STATE = ConversationState(MEMORY)
 ADAPTER = AdapterWithErrorHandler(SETTINGS, CONVERSATION_STATE)
-RECOGNIZER = FlightBookingRecognizer(CONFIG)
-BOOKING_DIALOG = BookingDialog()
-DIALOG = MainDialog(RECOGNIZER, BOOKING_DIALOG)
-BOT = DialogAndWelcomeBot(CONVERSATION_STATE, USER_STATE, DIALOG)
+# TELEMETRY_CLIENT = ApplicationInsightsTelemetryClient(
+#     instrumentation_key=CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY, 
+#     telemetry_processor=AiohttpTelemetryProcessor(), 
+#     client_queue_size=10)
+# TELEMETRY_MIDDLEWARE = TelemetryLoggerMiddleware(
+#     telemetry_client=TELEMETRY_CLIENT,
+#     log_personal_information=True)
+# ADAPTER.use(TELEMETRY_MIDDLEWARE)
+TELEMETRY_CLIENT = None
 
+RECOGNIZER = FlightBookingRecognizer(CONFIG, telemetry_client=TELEMETRY_CLIENT)
+BOOKING_DIALOG = BookingDialog()
+DIALOG = MainDialog(RECOGNIZER, BOOKING_DIALOG, telemetry_client=TELEMETRY_CLIENT)
+BOT = DialogAndWelcomeBot(CONVERSATION_STATE, USER_STATE, DIALOG, TELEMETRY_CLIENT)
+# TELEMETRY_CLIENT.main_dialog = DIALOG
 
 app = FastAPI()
 
