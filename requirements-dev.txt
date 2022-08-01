@@ -2,3 +2,5 @@ azure-cognitiveservices-language-luis
 azure-identity
 azure-keyvault
 notebook
+pandas
+sklearn
