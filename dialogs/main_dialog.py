@@ -1,52 +1,57 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-
-from botbuilder.dialogs import (
-    ComponentDialog,
-    WaterfallDialog,
-    WaterfallStepContext,
-    DialogTurnResult,
-)
-from botbuilder.dialogs.prompts import TextPrompt, PromptOptions
-from botbuilder.core import MessageFactory, TurnContext
-from botbuilder.schema import InputHints
+import json
+import re
 
 from booking_details import BookingDetails
+from botbuilder.core import (BotTelemetryClient, MessageFactory,
+                             NullTelemetryClient)
+from botbuilder.dialogs import (ComponentDialog, DialogTurnResult,
+                                WaterfallDialog, WaterfallStepContext)
+from botbuilder.dialogs.prompts import PromptOptions, TextPrompt
+from botbuilder.schema import Attachment, InputHints
 from flight_booking_recognizer import FlightBookingRecognizer
-from helpers.luis_helper import LuisHelper, Intent
+from helpers.luis_helper import Intent, LuisHelper
+
 from .booking_dialog import BookingDialog
 
 
 class MainDialog(ComponentDialog):
     def __init__(
-        self, luis_recognizer: FlightBookingRecognizer, booking_dialog: BookingDialog
+        self,
+        luis_recognizer: FlightBookingRecognizer,
+        booking_dialog: BookingDialog,
+        telemetry_client: BotTelemetryClient = None
     ):
         super(MainDialog, self).__init__(MainDialog.__name__)
+        self.telemetry_client = telemetry_client or NullTelemetryClient()
+        text_prompt = TextPrompt(TextPrompt.__name__)
+        text_prompt.telemetry_client = self.telemetry_client
+        booking_dialog.telemetry_client = self.telemetry_client
+        wf_dialog = WaterfallDialog("WFDialog", [self.intro_step, self.act_step, self.final_step])
+        wf_dialog.telemetry_client = self.telemetry_client
 
         self._luis_recognizer = luis_recognizer
         self._booking_dialog_id = booking_dialog.id
 
-        self.add_dialog(TextPrompt(TextPrompt.__name__))
+        self.add_dialog(text_prompt)
         self.add_dialog(booking_dialog)
-        self.add_dialog(
-            WaterfallDialog(
-                "WFDialog", [self.intro_step, self.act_step, self.final_step]
-            )
-        )
+        self.add_dialog(wf_dialog)
 
         self.initial_dialog_id = "WFDialog"
+
 
     async def intro_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         if not self._luis_recognizer.is_configured:
             await step_context.context.send_activity(
                 MessageFactory.text(
                     "NOTE: LUIS is not configured. To enable all capabilities, add 'LuisAppId', 'LuisAPIKey' and "
-                    "'LuisAPIHostName' to the appsettings.json file.",
+                    "'LuisAPIHostName' to the keyvault.",
                     input_hint=InputHints.ignoring_input,
                 )
-            )
-
+            )            
             return await step_context.next(None)
+        
         message_text = (
             str(step_context.options)
             if step_context.options
@@ -73,11 +78,6 @@ class MainDialog(ComponentDialog):
         )
 
         if intent == Intent.BOOK_FLIGHT.value and luis_result:
-            # Show a warning for Origin and Destination if we can't resolve them.
-            await MainDialog._show_warning_for_unsupported_cities(
-                step_context.context, luis_result
-            )
-
             # Run the BookingDialog giving it whatever details we have from the LUIS call.
             return await step_context.begin_dialog(self._booking_dialog_id, luis_result)
 
@@ -90,7 +90,7 @@ class MainDialog(ComponentDialog):
 
         else:
             didnt_understand_text = (
-                "Sorry, I didn't get that. Please try asking in a different way"
+                "Sorry, I did not understand. Can you rephrase your question?"
             )
             didnt_understand_message = MessageFactory.text(
                 didnt_understand_text, didnt_understand_text, InputHints.ignoring_input
@@ -106,27 +106,45 @@ class MainDialog(ComponentDialog):
             result = step_context.result
 
             # Now we have all the booking details call the booking service.
-
-            # If the call to the booking service was successful tell the user.
-            # time_property = Timex(result.travel_date)
-            # travel_date_msg = time_property.to_natural_language(datetime.now())
-            msg_txt = f"I have you booked to {result.destination} from {result.origin} on {result.travel_date}"
+            msg_txt = ("Thank you, your flight is booked. Check your email for the confirmation.")
             message = MessageFactory.text(msg_txt, msg_txt, InputHints.ignoring_input)
             await step_context.context.send_activity(message)
 
         prompt_message = "What else can I do for you?"
         return await step_context.replace_dialog(self.id, prompt_message)
 
-    @staticmethod
-    async def _show_warning_for_unsupported_cities(
-        context: TurnContext, luis_result: BookingDetails
-    ) -> None:
-        if luis_result.unsupported_airports:
-            message_text = (
-                f"Sorry but the following airports are not supported:"
-                f" {', '.join(luis_result.unsupported_airports)}"
-            )
-            message = MessageFactory.text(
-                message_text, message_text, InputHints.ignoring_input
-            )
-            await context.send_activity(message)
+
+    # Create internal function
+    def replace(self, templateCard: dict, data: dict):
+        string_temp = str(templateCard)
+        for key in data:
+            pattern = "\${" + key + "}"
+            string_temp = re.sub(pattern, str(data[key]), string_temp)
+        return eval(string_temp)
+
+
+    # Load attachment from file.
+    def create_adaptive_card_attachment(self, result):
+        """Create an adaptive card."""
+        
+        path =  "cards/bookedFlightCard.json" #need to create this
+        with open(path) as card_file:
+            card = json.load(card_file)
+        
+        origin = result.from_city
+        destination = result.to_city
+        start_date = result.from_date
+        end_date = result.to_date
+        budget = result.budget
+
+        templateCard = {
+            "origin": origin, 
+            "destination": destination,
+            "start_date": start_date,
+            "end_date": end_date,
+            "budget": budget}
+
+        flightCard = self.replace(card, templateCard)
+
+        return Attachment(
+            content_type="application/vnd.microsoft.card.adaptive", content=flightCard)
