@@ -1,8 +1,12 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+"""Flight booking dialog."""
+
+from datatypes_date_time.timex import Timex
 
 from botbuilder.dialogs import WaterfallDialog, WaterfallStepContext, DialogTurnResult
-from botbuilder.dialogs.prompts import ConfirmPrompt, TextPrompt, PromptOptions
+from botbuilder.dialogs.prompts import ConfirmPrompt, TextPrompt, PromptOptions, PromptCultureModels
+from botbuilder.dialogs.choices import Choice, ChoiceFactoryOptions
 from botbuilder.core import MessageFactory, BotTelemetryClient, NullTelemetryClient
 from .cancel_and_help_dialog import CancelAndHelpDialog
 from .date_resolver_dialog import DateResolverDialog
@@ -14,9 +18,11 @@ class BookingDialog(CancelAndHelpDialog):
     def __init__(
         self,
         dialog_id: str = None,
-        telemetry_client: BotTelemetryClient = NullTelemetryClient()):
+        telemetry_client: BotTelemetryClient = NullTelemetryClient(),
+    ):
         super(BookingDialog, self).__init__(
-            dialog_id or BookingDialog.__name__, telemetry_client)
+            dialog_id or BookingDialog.__name__, telemetry_client
+        )
         self.telemetry_client = telemetry_client
         text_prompt = TextPrompt(TextPrompt.__name__)
         text_prompt.telemetry_client = telemetry_client
@@ -36,6 +42,7 @@ class BookingDialog(CancelAndHelpDialog):
         waterfall_dialog.telemetry_client = telemetry_client
 
         self.add_dialog(text_prompt)
+        self.add_dialog(ConfirmPrompt(ConfirmPrompt.__name__))
         self.add_dialog(
             DateResolverDialog(
                 DateResolverDialog.__name__ + "_from_date",
@@ -185,7 +192,6 @@ class BookingDialog(CancelAndHelpDialog):
                         }
 
         if step_context.result:
-            # TRACK THE DATA INTO Application INSIGHTS
             # INFO, ERROR are severity levels reported to App Insight
             self.telemetry_client.track_trace("YES answer", properties, severity_level[1])
             return await step_context.end_dialog(booking_details)
