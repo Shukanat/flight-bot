@@ -5,8 +5,7 @@
 from datatypes_date_time.timex import Timex
 
 from botbuilder.dialogs import WaterfallDialog, WaterfallStepContext, DialogTurnResult
-from botbuilder.dialogs.prompts import ConfirmPrompt, TextPrompt, PromptOptions, PromptCultureModels
-from botbuilder.dialogs.choices import Choice, ChoiceFactoryOptions
+from botbuilder.dialogs.prompts import ConfirmPrompt, TextPrompt, PromptOptions
 from botbuilder.core import MessageFactory, BotTelemetryClient, NullTelemetryClient
 from .cancel_and_help_dialog import CancelAndHelpDialog
 from .date_resolver_dialog import DateResolverDialog

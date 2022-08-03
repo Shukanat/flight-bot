@@ -6,17 +6,17 @@ import re
 from booking_details import BookingDetails
 from botbuilder.core import (BotTelemetryClient, MessageFactory,
                              NullTelemetryClient)
-from botbuilder.dialogs import (ComponentDialog, DialogTurnResult,
-                                WaterfallDialog, WaterfallStepContext)
+from botbuilder.dialogs import (DialogTurnResult, WaterfallDialog,
+                                WaterfallStepContext)
 from botbuilder.dialogs.prompts import PromptOptions, TextPrompt
 from botbuilder.schema import Attachment, InputHints
 from flight_booking_recognizer import FlightBookingRecognizer
 from helpers.luis_helper import Intent, LuisHelper
 
-from .booking_dialog import BookingDialog
+from .booking_dialog import BookingDialog, CancelAndHelpDialog
 
 
-class MainDialog(ComponentDialog):
+class MainDialog(CancelAndHelpDialog):
     def __init__(
         self,
         luis_recognizer: FlightBookingRecognizer,
@@ -106,9 +106,11 @@ class MainDialog(ComponentDialog):
             result = step_context.result
 
             # Now we have all the booking details call the booking service.
-            msg_txt = ("Thank you, your flight is booked. Check your email for the confirmation.")
-            message = MessageFactory.text(msg_txt, msg_txt, InputHints.ignoring_input)
-            await step_context.context.send_activity(message)
+#            msg_txt = ("Thank you, your flight is booked. Check your email for the confirmation.")
+            reservation_card = self.create_adaptive_card_attachment(result)
+            response = MessageFactory.attachment(reservation_card)
+#            message = MessageFactory.text(msg_txt, msg_txt, InputHints.ignoring_input)
+            await step_context.context.send_activity(response)
 
         prompt_message = "What else can I do for you?"
         return await step_context.replace_dialog(self.id, prompt_message)
@@ -127,7 +129,7 @@ class MainDialog(ComponentDialog):
     def create_adaptive_card_attachment(self, result):
         """Create an adaptive card."""
         
-        path =  "cards/bookedFlightCard.json" #need to create this
+        path =  "cards/bookedFlightCard.json"
         with open(path) as card_file:
             card = json.load(card_file)
         

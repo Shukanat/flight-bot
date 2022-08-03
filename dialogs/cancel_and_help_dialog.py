@@ -41,7 +41,12 @@ class CancelAndHelpDialog(ComponentDialog):
         if inner_dc.context.activity.type == ActivityTypes.message:
             text = inner_dc.context.activity.text.lower()
 
-            help_message_text = "Show Help..."
+            help_message_text = (
+            "To book your holidays please specify:\n"
+            "- **Departure** and **Destination** city\n"
+            "- **Start** and **End** dates\n"
+            "- Total **Budget**\n")
+
             help_message = MessageFactory.text(
                 help_message_text, help_message_text, InputHints.expecting_input
             )
@@ -50,12 +55,12 @@ class CancelAndHelpDialog(ComponentDialog):
                 await inner_dc.context.send_activity(help_message)
                 return DialogTurnResult(DialogTurnStatus.Waiting)
 
-            cancel_message_text = "Cancelling"
+            cancel_message_text = "Exiting..."
             cancel_message = MessageFactory.text(
                 cancel_message_text, cancel_message_text, InputHints.ignoring_input
             )
 
-            if text in ("cancel", "quit"):
+            if text in ("cancel", "quit", "exit"):
                 await inner_dc.context.send_activity(cancel_message)
                 return await inner_dc.cancel_all_dialogs()
 

@@ -9,7 +9,7 @@
             "items": [
                 {
                     "type": "TextBlock",
-                    "text": "Your flight is booked : details below",
+                    "text": "Flight is booked : check your email for the confirmation",
                     "size": "Medium",
                     "weight": "Bolder",
                     "color": "good",
