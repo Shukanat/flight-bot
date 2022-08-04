@@ -20,7 +20,6 @@ class MainDialog(CancelAndHelpDialog):
         super(MainDialog, self).__init__(MainDialog.__name__)
         text_prompt = TextPrompt(TextPrompt.__name__)
         wf_dialog = WaterfallDialog("WFDialog", [self.intro_step, self.act_step, self.final_step])
-        wf_dialog.telemetry_client = self.telemetry_client
 
         self._luis_recognizer = luis_recognizer
         self._booking_dialog_id = booking_dialog.id
@@ -48,20 +47,14 @@ class MainDialog(CancelAndHelpDialog):
             if step_context.options
             else "Where do you want to go for holidays?"
         )
-        prompt_message = MessageFactory.text(
-            message_text, message_text, InputHints.expecting_input
-        )
+        prompt_message = MessageFactory.text(message_text, message_text, InputHints.expecting_input)
 
-        return await step_context.prompt(
-            TextPrompt.__name__, PromptOptions(prompt=prompt_message)
-        )
+        return await step_context.prompt(TextPrompt.__name__, PromptOptions(prompt=prompt_message))
 
     async def act_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         if not self._luis_recognizer.is_configured:
             # LUIS is not configured, we just run the BookingDialog path with an empty BookingDetailsInstance.
-            return await step_context.begin_dialog(
-                self._booking_dialog_id, BookingDetails()
-            )
+            return await step_context.begin_dialog(self._booking_dialog_id, BookingDetails())
 
         # Call LUIS and gather any potential booking details. (Note the TurnContext has the response to the prompt.)
         intent, luis_result = await LuisHelper.execute_luis_query(
@@ -80,9 +73,7 @@ class MainDialog(CancelAndHelpDialog):
             await step_context.context.send_activity(get_weather_message)
 
         else:
-            didnt_understand_text = (
-                "Sorry, I did not understand. Can you rephrase your question?"
-            )
+            didnt_understand_text = ("Sorry, I did not understand. Can you rephrase your question?")
             didnt_understand_message = MessageFactory.text(
                 didnt_understand_text, didnt_understand_text, InputHints.ignoring_input
             )
@@ -97,10 +88,8 @@ class MainDialog(CancelAndHelpDialog):
             result = step_context.result
 
             # Now we have all the booking details call the booking service.
-#            msg_txt = ("Thank you, your flight is booked. Check your email for the confirmation.")
             reservation_card = self.create_adaptive_card_attachment(result)
             response = MessageFactory.attachment(reservation_card)
-#            message = MessageFactory.text(msg_txt, msg_txt, InputHints.ignoring_input)
             await step_context.context.send_activity(response)
 
         prompt_message = "What else can I do for you?"

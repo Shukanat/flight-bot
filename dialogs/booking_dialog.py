@@ -11,7 +11,7 @@ from .date_resolver_dialog import DateResolverDialog
 class BookingDialog(CancelAndHelpDialog):
     """Flight booking implementation."""
 
-    def __init__(self, dialog_id: str = None):
+    def __init__(self, logs, dialog_id: str = None):
         super(BookingDialog, self).__init__(dialog_id or BookingDialog.__name__)
         text_prompt = TextPrompt(TextPrompt.__name__)
         waterfall_dialog = WaterfallDialog(
@@ -42,6 +42,7 @@ class BookingDialog(CancelAndHelpDialog):
         )
         self.add_dialog(waterfall_dialog)
         self.initial_dialog_id = WaterfallDialog.__name__
+        self._logs = logs
 
     async def from_city_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Prompt for from_city."""
@@ -141,28 +142,20 @@ class BookingDialog(CancelAndHelpDialog):
 
         # TRACK THE DATA INTO Application INSIGHTS
         # more here https://docs.microsoft.com/en-us/azure/azure-monitor/app/api-custom-events-metrics
-        properties = {}
-        properties["origin"] = booking_details.from_city
-        properties["destination"] = booking_details.to_city
-        properties["departure_date"] = booking_details.from_date
-        properties["return_date"] = booking_details.to_date
-        properties["budget"] = booking_details.budget
-
-
-        # severity levels as per  App Insight doc
-        severity_level = {0: "Verbose",
-                          1: "Information",
-                          2: "Warning",
-                          3: "Error",
-                          4: "Critical",
-                        }
+        to_log = {}
+        to_log["origin"] = booking_details.from_city
+        to_log["destination"] = booking_details.to_city
+        to_log["departure_date"] = booking_details.from_date
+        to_log["return_date"] = booking_details.to_date
+        to_log["budget"] = booking_details.budget
+        to_log["dialog_id"] = self.initial_dialog_id
+        properties = {'customDimensions': to_log}
 
         if step_context.result:
-            # INFO, ERROR are severity levels reported to App Insight
-            #self.telemetry_client.track_trace("YES answer", properties, severity_level[1])
+            with self._logs.tracer.span(name='feedback'):
+                self._logs.logger.info('YES answer', extra=properties)
             return await step_context.end_dialog(booking_details)
         else:
-            pass
-            # TRACK THE DATA INTO Application INSIGHTS
-            #self.telemetry_client.track_trace("NO answer", properties, severity_level[3])
+            with self._logs.tracer.span(name='feedback'):
+                self._logs.logger.error('NO answer', extra=properties)
         return await step_context.end_dialog()

@@ -21,15 +21,21 @@ from bots import DialogAndWelcomeBot
 
 from adapter_with_error_handler import AdapterWithErrorHandler
 from flight_booking_recognizer import FlightBookingRecognizer
+from logger import AzureLogger
 
 CONFIG = DefaultConfig()
+exporter = AzureExporter(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY};IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/")
+handler = AzureLogHandler(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY};IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/")
+sampler = ProbabilitySampler(1.0)
+LOGS = AzureLogger(exporter, handler, sampler)
+
 SETTINGS = BotFrameworkAdapterSettings(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
 MEMORY = MemoryStorage()
 USER_STATE = UserState(MEMORY)
 CONVERSATION_STATE = ConversationState(MEMORY)
-ADAPTER = AdapterWithErrorHandler(SETTINGS, CONVERSATION_STATE)
+ADAPTER = AdapterWithErrorHandler(SETTINGS, CONVERSATION_STATE, LOGS)
 RECOGNIZER = FlightBookingRecognizer(CONFIG)
-BOOKING_DIALOG = BookingDialog()
+BOOKING_DIALOG = BookingDialog(LOGS)
 DIALOG = MainDialog(RECOGNIZER, BOOKING_DIALOG)
 BOT = DialogAndWelcomeBot(CONVERSATION_STATE, USER_STATE, DIALOG)
 
@@ -38,9 +44,6 @@ app = FastAPI()
 HTTP_URL = COMMON_ATTRIBUTES['HTTP_URL']
 HTTP_STATUS_CODE = COMMON_ATTRIBUTES['HTTP_STATUS_CODE']
 
-exporter = AzureExporter(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY}")
-handler = AzureLogHandler(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY}")
-sampler = ProbabilitySampler(1.0)
 
 # fastapi middleware for opencensus
 @app.middleware("http")
