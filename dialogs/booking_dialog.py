@@ -152,10 +152,8 @@ class BookingDialog(CancelAndHelpDialog):
         properties = {'custom_dimensions': to_log}
 
         if step_context.result:
-            with self._logs.tracer.span(name='feedback'):
-                self._logs.logger.warning('YES answer', extra=properties)
+            self._logs.logger.warning('YES answer', extra=properties)
             return await step_context.end_dialog(booking_details)
         else:
-            with self._logs.tracer.span(name='feedback'):
-                self._logs.logger.error('NO answer', extra=properties)
+            self._logs.logger.error('NO answer', extra=properties)
         return await step_context.end_dialog()

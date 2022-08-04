@@ -24,10 +24,10 @@ from flight_booking_recognizer import FlightBookingRecognizer
 from logger import AzureLogger
 
 CONFIG = DefaultConfig()
-exporter = AzureExporter(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY};IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/")
-handler = AzureLogHandler(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY};IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/")
+exporter = AzureExporter(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY}")
+handler = AzureLogHandler(connection_string=f"InstrumentationKey={CONFIG.APPINSIGHTS_INSTRUMENTATIONKEY}")
 sampler = ProbabilitySampler(1.0)
-LOGS = AzureLogger(exporter, handler, sampler)
+LOGS = AzureLogger(handler)
 
 SETTINGS = BotFrameworkAdapterSettings(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
 MEMORY = MemoryStorage()
