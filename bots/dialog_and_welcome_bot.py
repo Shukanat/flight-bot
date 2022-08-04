@@ -10,8 +10,7 @@ from botbuilder.core import (
     ConversationState,
     MessageFactory,
     UserState,
-    TurnContext,
-    BotTelemetryClient
+    TurnContext
 )
 from botbuilder.schema import ChannelAccount, Attachment
 from helpers.dialog_helper import DialogHelper
@@ -21,21 +20,10 @@ from .dialog_bot import DialogBot
 class DialogAndWelcomeBot(DialogBot):
     """Main dialog to welcome users."""
 
-    def __init__(
-        self,
-        conversation_state: ConversationState,
-        user_state: UserState,
-        dialog: Dialog,
-        telemetry_client: BotTelemetryClient,
-    ):
-        super(DialogAndWelcomeBot, self).__init__(
-            conversation_state, user_state, dialog, telemetry_client
-        )
-        self.telemetry_client = telemetry_client
+    def __init__(self, conversation_state: ConversationState, user_state: UserState, dialog: Dialog):
+        super(DialogAndWelcomeBot, self).__init__(conversation_state, user_state, dialog)
 
-    async def on_members_added_activity(
-        self, members_added: List[ChannelAccount], turn_context: TurnContext
-    ):
+    async def on_members_added_activity(self, members_added: List[ChannelAccount], turn_context: TurnContext):
         for member in members_added:
             # Greet anyone that was not the target (recipient) of this message.
             # To learn more about Adaptive Cards, see https://aka.ms/msbot-adaptivecards for more details.
@@ -46,7 +34,7 @@ class DialogAndWelcomeBot(DialogBot):
                 await DialogHelper.run_dialog(
                     self.dialog,
                     turn_context,
-                    self.conversation_state.create_property("DialogState"),
+                    self.conversation_state.create_property("DialogState")
                 )
 
     # Load attachment from file.
@@ -56,6 +44,4 @@ class DialogAndWelcomeBot(DialogBot):
         with open(path) as in_file:
             card = json.load(in_file)
 
-        return Attachment(
-            content_type="application/vnd.microsoft.card.adaptive", content=card
-        )
+        return Attachment(content_type="application/vnd.microsoft.card.adaptive", content=card)

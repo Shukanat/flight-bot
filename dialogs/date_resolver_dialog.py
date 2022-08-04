@@ -3,7 +3,7 @@
 
 from datatypes_date_time.timex import Timex
 
-from botbuilder.core import MessageFactory, BotTelemetryClient, NullTelemetryClient
+from botbuilder.core import MessageFactory
 from botbuilder.dialogs import WaterfallDialog, DialogTurnResult, WaterfallStepContext
 from botbuilder.dialogs.prompts import (
     DateTimePrompt,
@@ -17,37 +17,21 @@ from .cancel_and_help_dialog import CancelAndHelpDialog
 class DateResolverDialog(CancelAndHelpDialog):
     """Resolve the date"""
 
-    def __init__(
-        self,
-        dialog_id: str = None,
-        telemetry_client: BotTelemetryClient = NullTelemetryClient(),
-        prompt_msg: str = "On what date would you like to travel?"
-    ):
-        super(DateResolverDialog, self).__init__(
-            dialog_id or DateResolverDialog.__name__, telemetry_client
-        )
-        self.telemetry_client = telemetry_client
+    def __init__(self, dialog_id: str = None, prompt_msg: str = "On what date would you like to travel?"):
+        super(DateResolverDialog, self).__init__(dialog_id or DateResolverDialog.__name__)
 
-        date_time_prompt = DateTimePrompt(
-            DateTimePrompt.__name__, DateResolverDialog.datetime_prompt_validator
-        )
-        date_time_prompt.telemetry_client = telemetry_client
+        date_time_prompt = DateTimePrompt(DateTimePrompt.__name__, DateResolverDialog.datetime_prompt_validator)
 
         waterfall_dialog = WaterfallDialog(
             WaterfallDialog.__name__ + "2", [self.initial_step, self.final_step]
         )
-        waterfall_dialog.telemetry_client = telemetry_client
 
         self.add_dialog(date_time_prompt)
         self.add_dialog(waterfall_dialog)
-
         self.initial_dialog_id = WaterfallDialog.__name__ + "2"
-
         self.prompt_msg = prompt_msg
 
-    async def initial_step(
-        self, step_context: WaterfallStepContext
-    ) -> DialogTurnResult:
+    async def initial_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Prompt for the date."""
         timex = step_context.options
 
@@ -62,7 +46,7 @@ class DateResolverDialog(CancelAndHelpDialog):
                 PromptOptions(
                     prompt=MessageFactory.text(self.prompt_msg),
                     retry_prompt=MessageFactory.text(reprompt_msg),
-                ),
+                )
             )
 
         # We have a Date we just need to check it is unambiguous.

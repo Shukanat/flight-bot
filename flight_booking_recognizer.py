@@ -1,24 +1,19 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-from botbuilder.ai.luis import LuisApplication, LuisRecognizer, LuisRecognizerOptionsV3
+from botbuilder.ai.luis import LuisApplication, LuisRecognizer
 from botbuilder.core import (
     Recognizer,
     RecognizerResult,
-    TurnContext,
-    BotTelemetryClient,
-    NullTelemetryClient,
+    TurnContext
 )
 
 from config import DefaultConfig
 
 
 class FlightBookingRecognizer(Recognizer):
-    def __init__(
-        self, configuration: DefaultConfig, telemetry_client: BotTelemetryClient = None
-    ):
+    def __init__(self, configuration: DefaultConfig):
         self._recognizer = None
-
         luis_is_configured = (
             configuration.LUIS_APP_ID
             and configuration.LUIS_API_KEY
@@ -32,13 +27,7 @@ class FlightBookingRecognizer(Recognizer):
                 configuration.LUIS_API_KEY,
                 "https://" + configuration.LUIS_API_HOST_NAME,
             )
-
-            options = LuisRecognizerOptionsV3()
-            options.telemetry_client = telemetry_client or NullTelemetryClient()
-
-            self._recognizer = LuisRecognizer(
-                luis_application, prediction_options=options
-            )
+            self._recognizer = LuisRecognizer(luis_application)
 
     @property
     def is_configured(self) -> bool:

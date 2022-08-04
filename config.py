@@ -16,4 +16,4 @@ class DefaultConfig:
     LUIS_APP_ID = secret_client.get_secret('LuisAppId').value
     LUIS_API_KEY = secret_client.get_secret('LuisAPIKey').value
     LUIS_API_HOST_NAME = secret_client.get_secret('LuisAPIHostName').value
-    APPINSIGHTS_INSTRUMENTATIONKEY = ""
+    APPINSIGHTS_INSTRUMENTATIONKEY = secret_client.get_secret('InstrumentationKey').value

@@ -4,8 +4,7 @@ import json
 import re
 
 from booking_details import BookingDetails
-from botbuilder.core import (BotTelemetryClient, MessageFactory,
-                             NullTelemetryClient)
+from botbuilder.core import MessageFactory
 from botbuilder.dialogs import (DialogTurnResult, WaterfallDialog,
                                 WaterfallStepContext)
 from botbuilder.dialogs.prompts import PromptOptions, TextPrompt
@@ -17,17 +16,9 @@ from .booking_dialog import BookingDialog, CancelAndHelpDialog
 
 
 class MainDialog(CancelAndHelpDialog):
-    def __init__(
-        self,
-        luis_recognizer: FlightBookingRecognizer,
-        booking_dialog: BookingDialog,
-        telemetry_client: BotTelemetryClient = None
-    ):
+    def __init__(self, luis_recognizer: FlightBookingRecognizer, booking_dialog: BookingDialog):
         super(MainDialog, self).__init__(MainDialog.__name__)
-        self.telemetry_client = telemetry_client or NullTelemetryClient()
         text_prompt = TextPrompt(TextPrompt.__name__)
-        text_prompt.telemetry_client = self.telemetry_client
-        booking_dialog.telemetry_client = self.telemetry_client
         wf_dialog = WaterfallDialog("WFDialog", [self.intro_step, self.act_step, self.final_step])
         wf_dialog.telemetry_client = self.telemetry_client
 

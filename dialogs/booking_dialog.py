@@ -1,12 +1,9 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-"""Flight booking dialog."""
-
-from datatypes_date_time.timex import Timex
 
 from botbuilder.dialogs import WaterfallDialog, WaterfallStepContext, DialogTurnResult
 from botbuilder.dialogs.prompts import ConfirmPrompt, TextPrompt, PromptOptions
-from botbuilder.core import MessageFactory, BotTelemetryClient, NullTelemetryClient
+from botbuilder.core import MessageFactory
 from .cancel_and_help_dialog import CancelAndHelpDialog
 from .date_resolver_dialog import DateResolverDialog
 
@@ -14,18 +11,9 @@ from .date_resolver_dialog import DateResolverDialog
 class BookingDialog(CancelAndHelpDialog):
     """Flight booking implementation."""
 
-    def __init__(
-        self,
-        dialog_id: str = None,
-        telemetry_client: BotTelemetryClient = NullTelemetryClient(),
-    ):
-        super(BookingDialog, self).__init__(
-            dialog_id or BookingDialog.__name__, telemetry_client
-        )
-        self.telemetry_client = telemetry_client
+    def __init__(self, dialog_id: str = None):
+        super(BookingDialog, self).__init__(dialog_id or BookingDialog.__name__)
         text_prompt = TextPrompt(TextPrompt.__name__)
-        text_prompt.telemetry_client = telemetry_client
-
         waterfall_dialog = WaterfallDialog(
             WaterfallDialog.__name__,
             [
@@ -36,42 +24,33 @@ class BookingDialog(CancelAndHelpDialog):
                 self.budget_step,
                 self.confirm_step,
                 self.final_step,
-            ],
+            ]
         )
-        waterfall_dialog.telemetry_client = telemetry_client
-
         self.add_dialog(text_prompt)
         self.add_dialog(ConfirmPrompt(ConfirmPrompt.__name__))
         self.add_dialog(
             DateResolverDialog(
                 DateResolverDialog.__name__ + "_from_date",
-                self.telemetry_client,
                 "When do you want to leave?"
             )
         )
         self.add_dialog(
             DateResolverDialog(
                 DateResolverDialog.__name__ + "_to_date",
-                self.telemetry_client,
                 "When do you want to come back?"
             )
         )
         self.add_dialog(waterfall_dialog)
-
         self.initial_dialog_id = WaterfallDialog.__name__
 
-    async def from_city_step(
-        self, step_context: WaterfallStepContext
-    ) -> DialogTurnResult:
+    async def from_city_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Prompt for from_city."""
         booking_details = step_context.options
 
         if not booking_details.from_city:
             return await step_context.prompt(
                 TextPrompt.__name__,
-                PromptOptions(
-                    prompt=MessageFactory.text("From what city will you be departing?")
-                ),
+                PromptOptions(prompt=MessageFactory.text("From what city will you be departing?"))
             )
 
         return await step_context.next(booking_details.from_city)
@@ -86,16 +65,12 @@ class BookingDialog(CancelAndHelpDialog):
         if not booking_details.to_city:
             return await step_context.prompt(
                 TextPrompt.__name__,
-                PromptOptions(
-                    prompt=MessageFactory.text("To what city would you like to travel?")
-                ),
+                PromptOptions(prompt=MessageFactory.text("To what city would you like to travel?"))
             )
 
         return await step_context.next(booking_details.to_city)
 
-    async def from_date_step(
-        self, step_context: WaterfallStepContext
-    ) -> DialogTurnResult:
+    async def from_date_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Prompt for travel date.
         This will use the DATE_RESOLVER_DIALOG."""
 
@@ -111,9 +86,7 @@ class BookingDialog(CancelAndHelpDialog):
 
         return await step_context.next(booking_details.from_date)
 
-    async def to_date_step(
-        self, step_context: WaterfallStepContext
-    ) -> DialogTurnResult:
+    async def to_date_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Prompt for travel date.
         This will use the DATE_RESOLVER_DIALOG."""
 
@@ -139,16 +112,12 @@ class BookingDialog(CancelAndHelpDialog):
         if not booking_details.budget:
             return await step_context.prompt(
                 TextPrompt.__name__,
-                PromptOptions(
-                    prompt=MessageFactory.text("What is your budget?")
-                ),
+                PromptOptions(prompt=MessageFactory.text("What is your budget?"))
             )
 
         return await step_context.next(booking_details.budget)
     
-    async def confirm_step(
-        self, step_context: WaterfallStepContext
-    ) -> DialogTurnResult:
+    async def confirm_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Confirm the information the user has provided."""
         booking_details = step_context.options
 
@@ -164,9 +133,7 @@ class BookingDialog(CancelAndHelpDialog):
         )
 
         # Offer a YES/NO prompt.
-        return await step_context.prompt(
-            ConfirmPrompt.__name__, PromptOptions(prompt=MessageFactory.text(msg))
-        )
+        return await step_context.prompt(ConfirmPrompt.__name__, PromptOptions(prompt=MessageFactory.text(msg)))
 
     async def final_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
         """Complete the interaction and end the dialog."""
@@ -192,10 +159,10 @@ class BookingDialog(CancelAndHelpDialog):
 
         if step_context.result:
             # INFO, ERROR are severity levels reported to App Insight
-            self.telemetry_client.track_trace("YES answer", properties, severity_level[1])
+            #self.telemetry_client.track_trace("YES answer", properties, severity_level[1])
             return await step_context.end_dialog(booking_details)
         else:
+            pass
             # TRACK THE DATA INTO Application INSIGHTS
-            self.telemetry_client.track_trace("NO answer", properties, severity_level[3])
-
+            #self.telemetry_client.track_trace("NO answer", properties, severity_level[3])
         return await step_context.end_dialog()
