@@ -62,6 +62,11 @@ async def middlewareOpencensus(request: Request, call_next):
     return response
 
 
+@app.get("/health_check")
+def check():
+    return {'message': 'Flight Bot is running'}
+
+
 @app.post("/api/messages")
 async def messages(req: Request):
     if "application/json" in req.headers["content-type"]:
