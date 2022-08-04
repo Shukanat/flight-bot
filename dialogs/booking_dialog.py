@@ -149,11 +149,11 @@ class BookingDialog(CancelAndHelpDialog):
         to_log["return_date"] = booking_details.to_date
         to_log["budget"] = booking_details.budget
         to_log["dialog_id"] = self.initial_dialog_id
-        properties = {'customDimensions': to_log}
+        properties = {'custom_dimensions': to_log}
 
         if step_context.result:
             with self._logs.tracer.span(name='feedback'):
-                self._logs.logger.info('YES answer', extra=properties)
+                self._logs.logger.warning('YES answer', extra=properties)
             return await step_context.end_dialog(booking_details)
         else:
             with self._logs.tracer.span(name='feedback'):
