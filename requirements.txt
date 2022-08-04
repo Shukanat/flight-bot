@@ -7,9 +7,6 @@ botframework-connector==4.14.2
 botbuilder-schema==4.14.2
 botbuilder-dialogs==4.14.2
 botbuilder-ai==4.14.2
-botbuilder-applicationinsights==4.14.2
-botbuilder-integration-aiohttp==4.14.2
-botbuilder-integration-applicationinsights-aiohttp==4.14.2
 botbuilder-testing==4.14.2
 datatypes-date-time==1.0.0.a2
 azure-cognitiveservices-language-luis==0.2.0
@@ -20,3 +17,4 @@ azure-keyvault==4.1.0
 opencensus-ext-azure==1.1.6
 opencensus-ext-logging==0.1.1
 opencensus-ext-requests==0.8.0
+gunicorn==20.1.0
