@@ -11,7 +11,7 @@ secret_client = SecretClient(vault_url="https://chatbot-vault.vault.azure.net/",
 class DefaultConfig:
     """ Bot Configuration """
 
-    APP_ID = secret_client.get_secret("MicrosoftAppId", "")
+    APP_ID = os.environ.get("MicrosoftAppId", "")
     APP_PASSWORD = os.environ.get("MicrosoftAppPassword", "")
     LUIS_APP_ID = secret_client.get_secret('LuisAppId').value
     LUIS_API_KEY = secret_client.get_secret('LuisAPIKey').value
