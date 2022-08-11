@@ -4,3 +4,4 @@ azure-keyvault
 notebook
 pandas
 sklearn
+loguru
